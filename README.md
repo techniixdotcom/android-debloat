@@ -22,11 +22,16 @@ Calls, SMS, contacts, mobile data, Wi-Fi, system and app updates, emergency aler
 
 ## Supported phones
 
-| Phone | Status |
+**Any Android phone** (stock firmware, locked bootloader, with Google Play). The script asks the phone itself which apps it needs, so the debloat, sweep, telemetry removal, settings and checks work on every brand.
+
+Some phones also get extra tuning:
+
+| Phone | Extra tuning |
 |---|---|
-| Google Pixel 10a | Dedicated profile |
-| CMF Phone 2 Pro (Nothing OS) | Dedicated profile |
-| Any other Android phone | Works: Google apps, AI, settings, sweep and maker telemetry. Run `scan` to review leftovers. |
+| Google Pixel 10a | Exact Pixel menu paths, memory tagging (MTE), Auditor |
+| CMF Phone 2 Pro (Nothing OS) | Nothing extras removed (Essential Space, Aura, Nothing Gallery, …), Nothing menu paths |
+| Samsung, Xiaomi / Redmi / POCO, OnePlus / Oppo / Realme, Motorola, Vivo, Honor / Huawei | Guided steps for the maker's own telemetry and ad settings |
+| Any other phone | Guided steps use a Settings-search word. Run `scan` and open an issue to get maker extras added. |
 
 On **Android 17**, built-in apps can't be uninstalled over ADB, so the script disables them and wipes their data instead.
 
