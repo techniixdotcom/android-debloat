@@ -446,6 +446,25 @@ wait_for_phone() {
     die "The phone is connected but doesn't answer. Run: adb kill-server, revoke USB debugging authorizations on the phone, replug, tap Allow (tick 'Always allow'), then run the script again."
   fi
 }
+# Is a Samsung plugged in over USB (even if adb can't see it)?
+samsung_on_usb() {
+  if command -v lsusb >/dev/null; then lsusb 2>/dev/null | grep -qi '04e8:\|samsung'; return; fi
+  if command -v system_profiler >/dev/null; then system_profiler SPUSBDataType 2>/dev/null | grep -qi samsung; return; fi
+  return 1
+}
+samsung_unblock_help() {
+  say ""
+  say "  ${c_warn}A Samsung phone is plugged in, but it isn't accepting commands from this computer.${c_0}"
+  say "  ${c_warn}That's Samsung's 'Auto Blocker': it blocks USB commands AND apps from outside${c_0}"
+  say "  ${c_warn}Google Play / Galaxy Store. It can only be switched off on the phone itself:${c_0}"
+  say "    1. Settings → Security and privacy → Auto Blocker → Off"
+  say "       (if a 'turn back on after 30 minutes' option appears, choose NOT to, the script"
+  say "        needs more time and F-Droid apps need it off to update)"
+  say "    2. Settings → About phone → Software information → tap 'Build number' 7 times"
+  say "    3. Settings → Developer options → USB debugging ON (no longer greyed out)"
+  say "    4. Unplug and replug, unlock the phone, tap 'Allow'"
+}
+
 _wait_for_phone() {
   local n; n="$(adb devices 2>/dev/null | grep -cE '\s(device|unauthorized)$')"
   if [[ "${n:-0}" -gt 1 && -z "${ANDROID_SERIAL:-}" ]]; then
@@ -459,11 +478,15 @@ _wait_for_phone() {
   say "    2. Settings → System → Developer options → USB debugging ON"
   say "    3. Plug in the USB cable, unlock the phone, tap 'Allow' on the"
   say "       'Allow USB debugging?' popup (tick 'Always allow from this computer')"
-  local i
+  local i shown_samsung=0
   for i in $(seq 1 120); do
     sleep 2
     state="$(adb get-state 2>&1)"
     [[ "$state" == "device" ]] && { ok "Phone connected and authorized"; return 0; }
+    # A Samsung that USB sees but adb doesn't = Auto Blocker / USB debugging greyed out
+    if [[ $shown_samsung == 0 && $i -ge 3 && "$state" != *unauthorized* ]] && samsung_on_usb; then
+      samsung_unblock_help; shown_samsung=1
+    fi
     if [[ "$state" == *unauthorized* && $((i % 10)) == 1 ]]; then
       say "    → Phone found, but tap 'Allow' on the phone screen"
     fi
@@ -518,6 +541,7 @@ preflight() {
   MAKER="$(ash getprop ro.product.manufacturer | tr '[:upper:]' '[:lower:]')"
   BRAND="$(ash getprop ro.product.brand | tr '[:upper:]' '[:lower:]')"
   ok "Maker: ${MAKER:-unknown} (brand: ${BRAND:-unknown})"
+  [[ "$MAKER" == *samsung* ]] && ok "Samsung Auto Blocker is off (USB commands work), so apps can be installed"
   logline "device: $DEVICE_NAME model=$model codename=$codename serial=$serial sdk=$sdk profile=$PROFILE maker=$MAKER brand=$BRAND"
   ok "Backups for this phone: $DEV_DIR"
   detect_camera
@@ -939,7 +963,13 @@ step_guided() {
       search_guide "Marketing information OFF" "Marketing"
       search_guide "Galaxy AI: process data only on device; unused features OFF" "Galaxy AI"
       search_guide "Bixby off, side button = power menu" "Bixby"
-      say "      Note: Samsung 'Auto Blocker' blocks sideloading. Only turn it on if you never sideload." ;;
+      say ""
+      say "      Auto Blocker: it's off now. Your choice:"
+      say "        • leave it OFF: Droid-ify keeps your F-Droid apps (IronFox, HeliBoard, ...) updated"
+      say "        • turn it ON: blocks USB attacks and outside apps, but F-Droid apps stop updating"
+      say "          (Play Store apps like Signal and Lawnchair keep updating either way)"
+      guide "Auto Blocker: decide (see above), recommended OFF if you use F-Droid apps" android.settings.SECURITY_SETTINGS \
+            "" "" "Auto Blocker" ;;
     */xiaomi*|*/redmi*|*/poco*|*/*redmi*|*/*poco*)
       say ""; say "  ${c_h}Xiaomi / HyperOS${c_0}"
       search_guide "Personalized ad recommendations OFF" "ad services"
