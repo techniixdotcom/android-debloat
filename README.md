@@ -1,4 +1,4 @@
-# Android-lockdown
+# phone-lockdown
 
 A single Bash script that de-Googles and hardens a **stock** Android phone over ADB, as far as you can without unlocking the bootloader. **Google Wallet tap-to-pay keeps working.**
 
