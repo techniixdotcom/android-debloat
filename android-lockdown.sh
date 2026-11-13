@@ -746,6 +746,10 @@ step_debloat() {
   else warn "Assistant is still set to: $holder (Settings → Apps → Default apps → Digital assistant app → None)"; fi
   set_setting secure assist_long_press_home_enabled 0
 secure clock_seconds 1
+system status_bar_show_battery_percent 1
+global window_animation_scale 0
+global transition_animation_scale 0
+global animator_duration_scale 0
 secure lockdown_in_power_menu 1
 global wifi_networks_available_notification_on 0
   set_setting secure assist_touch_gesture_enabled 0
@@ -827,6 +831,12 @@ step_settings() {
   set_setting secure lock_screen_lock_after_timeout 0   # lock immediately when the screen turns off
   set_setting system show_password 0
   set_setting secure clock_seconds 1                    # status-bar clock shows seconds (AOSP System UI Tuner setting)
+  set_setting system status_bar_show_battery_percent 1  # battery percentage in the status bar
+  [[ "$MAKER" == *samsung* ]] && set_setting system display_battery_percentage 1   # Samsung's own switch
+  # No animations: windows, transitions and app animations happen instantly (snappier)
+  set_setting global window_animation_scale 0
+  set_setting global transition_animation_scale 0
+  set_setting global animator_duration_scale 0
 }
 
 # ---------------------------------------------------------------- camera -----
