@@ -1,4 +1,4 @@
-# phone-lockdown
+# Android-lockdown
 
 A single Bash script that de-Googles and hardens a **stock** Android phone over ADB, as far as you can without unlocking the bootloader. **Google Wallet tap-to-pay keeps working.**
 
@@ -91,6 +91,7 @@ To stop the sweep from disabling an app, add its package name to `lockdown-state
 ## Troubleshooting
 
 - **adb hangs on Linux:** add `export ADB_LIBUSB=0` to `~/.bashrc`. The script also sets this itself.
+- **Samsung isn't detected, or USB debugging is greyed out:** Samsung's *Auto Blocker* blocks USB commands and apps from outside the Play Store and Galaxy Store. It can only be turned off on the phone: Settings → Security and privacy → Auto Blocker → Off. The script recognises a blocked Samsung and shows these steps. At the end it asks whether to turn Auto Blocker back on; F-Droid apps only update while it's off.
 - **"unauthorized":** in Developer options, tap *Revoke USB debugging authorizations*, replug the phone and tap **Allow** with *Always allow* ticked.
 - **No internet on some Wi-Fi networks:** the network is blocking private DNS. The script falls back to Automatic when it detects this; you can also set it yourself under Settings → Network → Private DNS → Automatic.
 
