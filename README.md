@@ -1,4 +1,4 @@
-# Android-lockdown
+# android-lockdown
 
 A single Bash script that de-Googles and hardens a **stock** Android phone over ADB, as far as you can without unlocking the bootloader. **Google Wallet tap-to-pay keeps working.**
 
@@ -50,8 +50,8 @@ On **Android 17**, built-in apps can't be uninstalled over ADB, so the script di
 ```bash
 git clone <this-repo>
 cd <this-repo>
-bash phone-lockdown.sh --dry-run   # preview, changes nothing
-bash phone-lockdown.sh             # full run
+bash android-lockdown.sh --dry-run   # preview, changes nothing
+bash android-lockdown.sh             # full run
 ```
 
 Keep the phone unlocked and plugged in, and only connect one phone at a time. When it finishes, **test a tap-to-pay payment first**.
@@ -60,7 +60,7 @@ Keep the phone unlocked and plugged in, and only connect one phone at a time. Wh
 
 | Command | What it does |
 |---|---|
-| `bash phone-lockdown.sh` | Everything, in order |
+| `bash android-lockdown.sh` | Everything, in order |
 | `apps` | Install the privacy apps and set Lawnchair as the home screen |
 | `debloat` | Google apps, AI, maker extras, telemetry, and the sweep |
 | `telemetry` | Maker telemetry only (UAD-ng list) |
