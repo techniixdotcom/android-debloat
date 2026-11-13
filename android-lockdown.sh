@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  phone-lockdown.sh: one-shot GrapheneOS-style lockdown for a STOCK phone
+#  android-lockdown.sh: one-shot GrapheneOS-style lockdown for a STOCK phone
 #  that keeps Google Wallet tap-to-pay working. Detects the phone automatically:
 #    - Google Pixel 10a      ("stallion")
 #    - CMF Phone 2 Pro       ("Galaga", Nothing OS)
@@ -10,32 +10,32 @@
 #  You don't need to unlock or root. Everything goes through ADB:
 #    - "pm uninstall --user 0" hides apps without touching the system image,
 #      so the Play Integrity checks still pass and Wallet keeps working.
-#    - Everything is logged and can be undone with:  ./phone-lockdown.sh restore
+#    - Everything is logged and can be undone with:  ./android-lockdown.sh restore
 #    - A factory reset always brings the phone back to stock.
 #
 #  USAGE
-#    ./phone-lockdown.sh                 # do EVERYTHING (asks before risky steps)
-#    ./phone-lockdown.sh all --yes       # everything, no questions
-#    ./phone-lockdown.sh all --dry-run   # show what would happen, change nothing
+#    ./android-lockdown.sh                 # do EVERYTHING (asks before risky steps)
+#    ./android-lockdown.sh all --yes       # everything, no questions
+#    ./android-lockdown.sh all --dry-run   # show what would happen, change nothing
 #
 #    Individual steps:
-#    ./phone-lockdown.sh apps            # install privacy replacement apps (F-Droid)
-#    ./phone-lockdown.sh debloat         # remove Google apps + telemetry
-#    ./phone-lockdown.sh settings        # network/privacy settings
-#    ./phone-lockdown.sh manual          # walk through every setting you change by hand (Google, security,
+#    ./android-lockdown.sh apps            # install privacy replacement apps (F-Droid)
+#    ./android-lockdown.sh debloat         # remove Google apps + telemetry
+#    ./android-lockdown.sh settings        # network/privacy settings
+#    ./android-lockdown.sh manual          # walk through every setting you change by hand (Google, security,
 #                                        #   and the phone maker's own telemetry/ad switches, any brand)
-#    ./phone-lockdown.sh lock            # lock screen, NFC unlock, SIM PIN, Google account access
-#    ./phone-lockdown.sh harden          # restrict any Google apps you kept
-#    ./phone-lockdown.sh camera          # camera without GPS, Photos as offline viewer
-#    ./phone-lockdown.sh install x.apk   # sideload over ADB (skips developer verification)
-#    ./phone-lockdown.sh verify          # check the phone's ACTUAL state (PASS/FAIL), changes nothing
-#    ./phone-lockdown.sh sweep           # disable EVERY pre-installed drawer app that isn't needed (works on any brand;
+#    ./android-lockdown.sh lock            # lock screen, NFC unlock, SIM PIN, Google account access
+#    ./android-lockdown.sh harden          # restrict any Google apps you kept
+#    ./android-lockdown.sh camera          # camera without GPS, Photos as offline viewer
+#    ./android-lockdown.sh install x.apk   # sideload over ADB (skips developer verification)
+#    ./android-lockdown.sh verify          # check the phone's ACTUAL state (PASS/FAIL), changes nothing
+#    ./android-lockdown.sh sweep           # disable EVERY pre-installed drawer app that isn't needed (works on any brand;
 #                                        #   keeps calls/SMS/camera/gallery/alarms/launcher/Wallet/Play and every
 #                                        #   app you installed; extra keeps: lockdown-state/keep-apps.txt)
-#    ./phone-lockdown.sh telemetry       # disable the phone maker's telemetry/analytics/ads (UAD-ng list, any brand)
-#    ./phone-lockdown.sh scan            # list every app in the app drawer and what the script does with it
-#    ./phone-lockdown.sh status          # show what's been done
-#    ./phone-lockdown.sh restore         # undo everything
+#    ./android-lockdown.sh telemetry       # disable the phone maker's telemetry/analytics/ads (UAD-ng list, any brand)
+#    ./android-lockdown.sh scan            # list every app in the app drawer and what the script does with it
+#    ./android-lockdown.sh status          # show what's been done
+#    ./android-lockdown.sh restore         # undo everything
 #
 #  NEEDS on the computer: bash, curl, python3. adb is downloaded automatically
 #         from Google if it's missing. Mac/Linux: run in Terminal. Windows: use Git Bash.
@@ -468,7 +468,7 @@ samsung_unblock_help() {
 _wait_for_phone() {
   local n; n="$(adb devices 2>/dev/null | grep -cE '\s(device|unauthorized)$')"
   if [[ "${n:-0}" -gt 1 && -z "${ANDROID_SERIAL:-}" ]]; then
-    die "More than one phone is plugged in. Unplug one (or run: ANDROID_SERIAL=<serial> bash phone-lockdown.sh ...)."
+    die "More than one phone is plugged in. Unplug one (or run: ANDROID_SERIAL=<serial> bash android-lockdown.sh ...)."
   fi
   local state; state="$(adb get-state 2>&1)"
   [[ "$state" == "device" ]] && { ok "Phone connected and authorized"; return 0; }
@@ -528,7 +528,7 @@ preflight() {
     *)
       PROFILE=generic; DEVICE_NAME="$model"
       warn "$model ($codename) has no dedicated profile. Google apps, AI, settings and checks still apply;"
-      warn "phone-maker extras are skipped. Run './phone-lockdown.sh scan' afterwards to review leftovers."
+      warn "phone-maker extras are skipped. Run './android-lockdown.sh scan' afterwards to review leftovers."
       confirm "Continue?" || exit 1 ;;
   esac
   # Separate backups per phone, so restore only ever touches this phone
@@ -703,7 +703,7 @@ set_default_launcher() {
 step_launcher() {
   head_ "Home screen: Lawnchair"
   if ! is_installed "$LAUNCHER_PKG"; then
-    warn "Lawnchair isn't installed yet. Install it from the Play Store, then run: bash phone-lockdown.sh launcher"
+    warn "Lawnchair isn't installed yet. Install it from the Play Store, then run: bash android-lockdown.sh launcher"
     return 0
   fi
   if set_default_launcher; then ok "Lawnchair is the default home screen"
@@ -1190,7 +1190,7 @@ step_telemetry() {
   done <<<"$list"
   if [[ ${#go[@]} == 0 ]]; then ok "No known maker telemetry found on this $DEVICE_NAME"; return 0; fi
   say "  To keep one, add its name to $KEEP_FILE"
-  confirm "Disable these ${#go[@]} telemetry/analytics packages? (undo: bash phone-lockdown.sh restore)" \
+  confirm "Disable these ${#go[@]} telemetry/analytics packages? (undo: bash android-lockdown.sh restore)" \
     || { warn "Telemetry step skipped"; return 0; }
   [[ $DRY == 0 ]] && printf '%s\n' "${go[@]}" >> "$DEV_DIR/telemetry-packages.txt"
   for pkg in "${go[@]}"; do remove_pkg "$pkg"; done
@@ -1209,7 +1209,7 @@ ensure_keep_file() {
   mkdir -p "$STATE_DIR"
   cat > "$KEEP_FILE" <<'EOK'
 # Apps the sweep must NEVER disable, one package name per line (applies to every phone).
-# Find names with:  bash phone-lockdown.sh scan
+# Find names with:  bash android-lockdown.sh scan
 # Examples (remove the # in front to keep them):
 #com.google.android.calculator
 #com.sec.android.app.popupcalculator
@@ -1280,10 +1280,10 @@ step_sweep() {
   if [[ ${#go[@]} -gt 0 ]]; then
     say "  Will be disabled (data wiped):"
     for pkg in "${go[@]}"; do printf '    %b✗%b       %s\n' "$c_err" "$c_0" "$pkg"; done
-    say "  To keep one, add its name to $KEEP_FILE and run: bash phone-lockdown.sh sweep"
+    say "  To keep one, add its name to $KEEP_FILE and run: bash android-lockdown.sh sweep"
   fi
   if [[ ${#go[@]} == 0 ]]; then ok "Nothing left to sweep"; return; fi
-  confirm "Disable/remove these ${#go[@]} apps? (undo any time with: bash phone-lockdown.sh restore)" \
+  confirm "Disable/remove these ${#go[@]} apps? (undo any time with: bash android-lockdown.sh restore)" \
     || { warn "Sweep skipped"; return; }
   for pkg in "${go[@]}"; do remove_pkg "$pkg"; done
   refresh_installed
@@ -1332,7 +1332,7 @@ step_verify() {
   [[ -z "${v//[[:space:]]/}" ]] && printf '    %b  no assistant app\n' "$P" || { printf '    %b  assistant app: %s\n' "$F" "$v"; fails=$((fails+1)); }
   v="$(ash cmd role get-role-holders android.app.role.HOME)"
   if [[ "$v" == *"$LAUNCHER_PKG"* ]]; then printf '    %b  home screen: Lawnchair\n' "$P"
-  else printf '    %b  home screen: %s (run: bash phone-lockdown.sh launcher)\n' "$F" "${v:-none}"; fails=$((fails+1)); fi
+  else printf '    %b  home screen: %s (run: bash android-lockdown.sh launcher)\n' "$F" "${v:-none}"; fails=$((fails+1)); fi
   v="$(ash cmd role get-role-holders android.app.role.BROWSER)"
   [[ "$v" == *ironfox* ]] && printf '    %b  browser: %s\n' "$P" "$v" || { printf '    %b  browser: %s\n' "$F" "$v"; fails=$((fails+1)); }
   v="$(ash settings get secure default_input_method)"
@@ -1393,7 +1393,7 @@ EOV
   if [[ "$(ash 'ping -c 1 -W 3 1.1.1.1 >/dev/null 2>&1 && echo up')" == up ]]; then
     printf '    %b  internet reachable\n' "$P"
     [[ "$(ash 'ping -c 1 -W 5 play.googleapis.com >/dev/null 2>&1 && echo up')" == up ]] && printf '    %b  name lookups (DNS) working\n' "$P" \
-      || { printf '    %b  DNS NOT working (run: bash phone-lockdown.sh settings)\n' "$F"; fails=$((fails+1)); }
+      || { printf '    %b  DNS NOT working (run: bash android-lockdown.sh settings)\n' "$F"; fails=$((fails+1)); }
   else
     printf '    %b  no internet right now (Wi-Fi/data off?), connectivity not tested\n' "${c_warn}SKIP${c_0}"
   fi
@@ -1468,12 +1468,12 @@ checklist() {
       (Photos, Camera, Calculator, ...). NEVER block Play Services or Wallet.
    5. Shelter: create the work profile for any Google app you still need.
    6. Sideloading later: Developer options → "advanced flow" once,
-      or always:  bash phone-lockdown.sh install app.apk
+      or always:  bash android-lockdown.sh install app.apk
    7. On a computer or in IronFox: myaccount.google.com/connections → remove apps you
       don't use, and myaccount.google.com → Data & privacy → pause Web & App Activity,
       Timeline and YouTube history; Personalized ads OFF.
    8. Developer options → USB debugging OFF.
-   Any time later (e.g. after a system update):  bash phone-lockdown.sh verify
+   Any time later (e.g. after a system update):  bash android-lockdown.sh verify
 EOC
 }
 
@@ -1506,7 +1506,7 @@ EOD
     *) cat <<'EOD'
 
   THIS PHONE HAS NO DEDICATED PROFILE
-   • Run './phone-lockdown.sh scan' and send the output to get the maker's extras added.
+   • Run './android-lockdown.sh scan' and send the output to get the maker's extras added.
 EOD
     ;;
   esac
@@ -1556,7 +1556,7 @@ EOF2
 
   SIDELOADING
   17. Developer options → turn on the "advanced flow" once (restart + 24 h wait), or
-      always install with:  ./phone-lockdown.sh install app.apk
+      always install with:  ./android-lockdown.sh install app.apk
 
   CAMERA / PHOTOS
    • Open Google Photos once. If it asks about backup, choose not to back up
