@@ -860,6 +860,14 @@ step_guided() {
     guide "Phone app: Caller ID & spam OFF (stops sending numbers to Google)" android.settings.SETTINGS \
           "Phone app → ⋮ → Settings → Caller ID & spam → Off" \
           "Phone app → ⋮ → Settings → Caller ID & spam → Off" "Caller ID"
+    guide "Phone app: AI features OFF (Call Assist, Call Screen, call notes, Gemini)" android.settings.SETTINGS \
+          "Phone app → ⋮ → Settings → Call Assist → turn everything off" \
+          "Phone app → ⋮ → Settings → Call Assist (or Spam & Call Screen) → turn everything off" "Call Assist"
+  fi
+  if is_installed com.google.android.apps.messaging; then
+    guide "Messages: Gemini OFF (and Magic Compose / suggestions)" android.settings.SETTINGS \
+          "Messages app → profile icon → Messages settings → Gemini in Messages → Off; Suggestions → all Off" \
+          "Messages app → profile icon → Messages settings → Gemini in Messages → Off; Suggestions → all Off" "Messages"
   fi
 
   say ""; say "  ${c_h}Security${c_0}"
@@ -1033,6 +1041,39 @@ step_motion() {
     is_installed "$p" && remove_pkg "$p"
   done
   say "  Apps that need a permission again will simply ask next time you open them."
+}
+
+REPLACE_SMS=org.fossify.messages
+REPLACE_DIALER=org.fossify.phone
+step_replace() {
+  head_ "Replace Google Messages + Phone with Fossify (no Google, no Gemini)"
+  say "  You keep: calls, SMS/MMS, contacts, emergency calls, Wi-Fi calling, VoLTE."
+  say "  You lose: RCS chat (typing dots, read receipts, Wi-Fi texting), Google's spam"
+  say "  filter and caller ID, Call Screen, and visual voicemail (dial voicemail instead)."
+  confirm "Switch to Fossify Messages and Fossify Phone?" || { warn "Kept Google Messages and Phone"; return 0; }
+  refresh_installed
+  fdroid_install "$REPLACE_SMS" "Fossify Messages"
+  fdroid_install "$REPLACE_DIALER" "Fossify Phone"
+  refresh_installed
+  local role pkg old new ok_switch
+  for role in SMS DIALER; do
+    [[ $role == SMS ]] && { new=$REPLACE_SMS; old=com.google.android.apps.messaging; } \
+                       || { new=$REPLACE_DIALER; old=com.google.android.dialer; }
+    is_installed "$new" || { warn "$new isn't installed, keeping $old"; continue; }
+    act cmd role add-role-holder "android.app.role.$role" "$new" >/dev/null
+    if [[ $DRY == 1 ]] || ash cmd role get-role-holders "android.app.role.$role" | grep -q "$new"; then
+      ok "$new is now the default $( [[ $role == SMS ]] && echo SMS || echo phone ) app"
+      if is_installed "$old"; then
+        act pm clear --user 0 "$old" >/dev/null 2>&1
+        local out; out="$(act pm disable-user --user 0 "$old")"
+        if [[ $DRY == 1 || "$out" == *disabled* ]]; then ok "disabled $old"; [[ $DRY == 0 ]] && echo "$old" >> "$LOG_DISABLED"
+        else warn "couldn't disable $old ($out)"; fi
+      fi
+    else
+      warn "Android didn't accept $new as default; open it once on the phone and accept the prompt, then run this step again"
+    fi
+  done
+  say "  Test now: send yourself an SMS and make a short call."
 }
 
 step_harden() {
@@ -1268,7 +1309,8 @@ step_verify() {
 
   say "  Must stay enabled (tap-to-pay, calls, camera):"
   for pkg in com.google.android.gms com.android.vending com.google.android.apps.walletnfcrel \
-             com.google.android.dialer com.google.android.apps.messaging "$CAMERA_PKG" \
+             $(ash cmd role get-role-holders android.app.role.DIALER | tr -d '[:space:]') \
+             $(ash cmd role get-role-holders android.app.role.SMS | tr -d '[:space:]') "$CAMERA_PKG" \
              "$( [[ $PHOTOS_NEEDED == 1 ]] && echo "$PHOTOS_PKG" || echo "$PHOTO_VIEWER" )"; do
     if grep -qx "$pkg" <<<"$en"; then printf '    %b  %s\n' "$P" "$pkg"
     else printf '    %b  %s is not enabled\n' "$F" "$pkg"; fails=$((fails+1)); fi
@@ -1432,7 +1474,11 @@ checklist() {
       don't use, and myaccount.google.com → Data & privacy → pause Web & App Activity,
       Timeline and YouTube history; Personalized ads OFF.
    8. Developer options → USB debugging OFF.
-   Any time later (e.g. after a system update):  bash android-lockdown.sh verify
+   After every system update: run 'bash android-lockdown.sh verify'. Updates can switch
+   disabled apps (Gemini, the Google app) back on; if verify shows FAIL, run 'debloat' again.
+   Gemini still in Messages or the Phone app? Menu → 'replace' swaps both for Fossify.
+   Extra: block Gemini on the network in RethinkDNS → DNS → custom rules:
+   gemini.google.com, bard.google.com, generativelanguage.googleapis.com
 EOC
 }
 
@@ -1559,6 +1605,7 @@ MENU_ITEMS=(
   "manual|Walk through the settings you change on the phone"
   "launcher|Make Lawnchair the default home screen"
   "harden|Restrict Google apps you kept"
+  "replace|Swap Google Messages + Phone for Fossify Messages + Phone (no Google, no Gemini)"
   "verify|PASS/FAIL check of the phone (changes nothing)"
   "scan|List every app and what the script does with it (changes nothing)"
   "install|Sideload APK file(s) over USB"
@@ -1608,7 +1655,7 @@ run_mode() {
     all)
       preflight
       pause "Before starting, check that Wallet works and that your photos are backed up"
-      local steps=(apps debloat telemetry sweep camera settings lock guided harden motion verify scan)
+      local steps=(apps replace debloat telemetry sweep camera settings lock guided harden motion verify scan)
       local i=0 st
       for st in "${steps[@]}"; do
         i=$((i+1))
@@ -1632,6 +1679,7 @@ run_mode() {
     launcher) preflight; refresh_installed; step_launcher; step_verify ;;
     harden)   preflight; step_harden; step_motion; step_verify ;;
     motion)   preflight; step_motion; step_verify ;;
+    replace)  preflight; step_replace; step_verify ;;
     camera)   preflight; step_camera; step_verify ;;
     restore)  preflight; step_restore ;;
     status)   preflight; step_status ;;
@@ -1640,7 +1688,7 @@ run_mode() {
       [[ ${#ARGS[@]} -gt 1 ]] || die "Usage: $0 install app1.apk [app2.apk ...]"
       for apk in "${ARGS[@]:1}"; do echo -n "$apk: "; adb_install "$apk" | tail -1; done
       ;;
-    *) die "Unknown mode '$MODE'. Use: all | apps | motion | launcher | debloat | telemetry | sweep | manual | verify | scan | camera | settings | lock | harden | install | status | restore" ;;
+    *) die "Unknown mode '$MODE'. Use: all | apps | motion | replace | launcher | debloat | telemetry | sweep | manual | verify | scan | camera | settings | lock | harden | install | status | restore" ;;
   esac
 }
 
