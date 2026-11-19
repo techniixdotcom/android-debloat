@@ -1,6 +1,6 @@
 # android-lockdown
 
-A single Bash script that partly de-Googles and hardens a stock Android phone over USB (ADB), **without root and without unlocking the bootloader**. Google Wallet tap-to-pay, calls and SMS keep working.
+A single Bash script that de-Googles and hardens a stock Android phone over USB (ADB), **without root and without unlocking the bootloader**. Google Wallet tap-to-pay, calls and SMS keep working.
 
 Works best on Pixel and Nothing phones; also has profiles for Samsung, Xiaomi, OnePlus/Oppo/Realme, Motorola, Vivo and Honor.
 
@@ -8,10 +8,11 @@ Works best on Pixel and Nothing phones; also has profiles for Samsung, Xiaomi, O
 
 - **Installs privacy apps** from F-Droid: Droid-ify, IronFox, HeliBoard, Organic Maps, K-9 Mail, Fossify apps, Ente Auth, Shelter, RethinkDNS (plus Signal and Lawnchair from the Play Store)
 - **Removes Google bloat and all AI**: Gemini, Assistant, AICore, the Google app, YouTube, Chrome, Gmail, Maps and more (each one only after its replacement is installed)
+- **Optionally replaces Google Messages and Phone** with Fossify Messages and Fossify Phone (no Google, no Gemini). It asks first, because you lose RCS chat, Google's spam filter and caller ID, Call Screen and visual voicemail. Calls, SMS/MMS, VoLTE and Wi-Fi calling keep working.
 - **Removes phone-maker extras and telemetry** using the [UAD-ng](https://github.com/Universal-Debloater-Alliance/universal-android-debloater-next-generation) list
 - **Applies privacy settings**: Private DNS (AdGuard), no Wi-Fi/Bluetooth scanning, GrapheneOS connectivity checks, MAC randomization, lock screen hardening
 - **Blocks tracking**: movement/activity recognition, body sensors, background location, camera location
-- **Walks you through** the settings ADB can't change (ad ID, Google Location Accuracy, theft protection, 2G, SIM PIN, …)
+- **Walks you through** the settings ADB can't change (ad ID, Google Location Accuracy, theft protection, 2G, SIM PIN, Gemini in Messages, AI call features, …)
 - **Verifies** the result with a PASS/FAIL report
 - **Everything is reversible** with `restore`
 
@@ -47,6 +48,7 @@ bash android-lockdown.sh --dry-run all   # show what would happen, change nothin
 | `lock`      | Lock screen, power menu, NFC, SIM                         |
 | `manual`    | Guided walk-through of on-phone settings                  |
 | `harden`    | Restrict the Google apps you kept                         |
+| `replace`   | Swap Google Messages + Phone for Fossify (asks first)     |
 | `verify`    | PASS/FAIL check (changes nothing)                         |
 | `scan`      | List every app and what the script does with it           |
 | `install`   | Sideload APKs: `install app.apk [...]`                    |
@@ -56,6 +58,12 @@ bash android-lockdown.sh --dry-run all   # show what would happen, change nothin
 Flags: `--dry-run`, `--yes` / `-y` (no prompts).
 
 To keep an app the sweep would remove, add its package name to `lockdown-state/keep-apps.txt`.
+
+## After system updates
+
+Updates can turn disabled apps (Gemini, the Google app) back on. Run `verify` after every update, and if anything shows FAIL, run `debloat` again.
+
+For extra protection, block Gemini at the network level in RethinkDNS → DNS → custom rules: `gemini.google.com`, `bard.google.com`, `generativelanguage.googleapis.com`.
 
 ## Files
 
