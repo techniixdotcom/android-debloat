@@ -1,6 +1,6 @@
 # android-lockdown
 
-A single Bash script that de-Googles and hardens a stock Android phone over USB (ADB), **without root and without unlocking the bootloader**. Google Wallet tap-to-pay, calls and SMS keep working.
+A single Bash script that partly de-Googles and hardens a stock Android phone over USB (ADB), **without root and without unlocking the bootloader**. Google Wallet tap-to-pay, calls and SMS keep working.
 
 Works best on Pixel and Nothing phones; also has profiles for Samsung, Xiaomi, OnePlus/Oppo/Realme, Motorola, Vivo and Honor.
 
